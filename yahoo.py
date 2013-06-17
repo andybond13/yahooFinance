@@ -1,4 +1,22 @@
 #!/usr/bin/python
+#/*******************************************************************************
+#
+#  Script <yahooFinance> 
+#
+#  Author: Andrew J. Stershic
+#          Duke Computational Mechanics Lab (DCML)
+#          Duke University - Durham, NC (USA)
+#  E-mail: ajs84@duke.edu
+#  Web:    www.duke.edu/~ajs84
+#
+#  Copyright (c) 2013 Andrew Stershic. All rights reserved. No warranty. No
+#  liability.
+#
+#  *Please cite ALL use of code in academic works, presentations, and
+#  publications, an example template of which is given by:
+#  http://lrweb.beds.ac.uk/guides/ref/cite_computer_program
+#
+#*******************************************************************************/
 
 import csv
 import urllib
