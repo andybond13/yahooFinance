@@ -94,7 +94,7 @@ def main(file,out):
 	#import list of symbols
 	inReader = csv.reader(open(file, 'rb'), delimiter=' ', quotechar='"')
 	outWriter = csv.writer(open(out, 'wb'), delimiter=' ',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-	outWriter.writerow(['symbol', 'Company Name', '# Shares', 'Price','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield'])
+	outWriter.writerow(['symbol', 'Company Name', 'Price', '# Shares','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield'])
 
 	#---begin loop
 	for row in inReader:
@@ -141,6 +141,14 @@ def main(file,out):
 		iss_value = parse(cf, 'Sale Purchase of Stock</td><td align="right">')
 		iss_value_out = make_number(iss_value+'K')
 		print iss_value_out
+
+		#skip if not found
+		if num_shares_out is '0':
+			print "Skipped"
+			continue
+		if price is '0':
+			print "Skipped"
+			continue
 
 		#calculate
 		net_payout = -float(div_value_out)-float(iss_value_out)
