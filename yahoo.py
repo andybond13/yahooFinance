@@ -153,7 +153,7 @@ def main(file,out):
 		#calculate
 		net_payout = -float(div_value_out)-float(iss_value_out)
 		net_payout_per_share = net_payout/float(num_shares_out)
-		dividend_yield = -float(div_value_out)/(float(price)*float(num_shares_out))
+		dividend_yield = -float(div_value_out)/(float(price_out)*float(num_shares_out))
 		shareholder_yield = net_payout_per_share/float(price)
 		print str(net_payout)
 		print str(net_payout_per_share)
