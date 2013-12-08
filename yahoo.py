@@ -94,7 +94,7 @@ def main(file,out):
 	#import list of symbols
 	inReader = csv.reader(open(file, 'rb'), delimiter=' ', quotechar='"')
 	outWriter = csv.writer(open(out, 'wb'), delimiter=' ',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-	outWriter.writerow(['symbol', 'Company Name', 'Price', '# Shares','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield'])
+	outWriter.writerow(['symbol', 'Company Name', 'Price', '# Shares','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield','Beta','Price/Book Ratio'])
 
 	#---begin loop
 	for row in inReader:
@@ -142,6 +142,16 @@ def main(file,out):
 		iss_value_out = make_number(iss_value+'K')
 		print iss_value_out
 
+		#beta
+                beta = parse(s, 'Beta:</td><td class="yfnc_tabledata1">')
+                beta_out = make_number(beta)
+		print beta_out
+
+		#price-book ratio
+		pbr = parse(s, 'Price/Book (mrq):</td><td class="yfnc_tabledata1">')
+		pbr_out = make_number(pbr)
+		print pbr_out
+
 		#skip if not found
 		if num_shares_out is '0':
 			print "Skipped"
@@ -161,7 +171,7 @@ def main(file,out):
 		print str(shareholder_yield)
 
 		#save to .csv
-		outWriter.writerow([symbol, name, price, num_shares_out, div_value_out, iss_value_out, '', net_payout_per_share, dividend_yield, shareholder_yield])
+		outWriter.writerow([symbol, name, price, num_shares_out, div_value_out, iss_value_out, '', net_payout_per_share, dividend_yield, shareholder_yield,beta_out,pbr_out])
 
 	#---end loop
 
