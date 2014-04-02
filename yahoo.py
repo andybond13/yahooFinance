@@ -93,7 +93,7 @@ def removeComma(inString):
 def main(file,out):
 	#import list of symbols
 	inReader = csv.reader(open(file, 'rb'), delimiter=' ', quotechar='"')
-	outWriter = csv.writer(open(out, 'wb'), delimiter=' ',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+	outWriter = csv.writer(open(out, 'wb'), delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
 	outWriter.writerow(['symbol', 'Company Name', 'Price', '# Shares','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield','Beta','Price/Book Ratio'])
 
 	#---begin loop
