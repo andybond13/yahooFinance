@@ -52,9 +52,9 @@ def write_to_file(filename,tickers):
     return
 
 #S&P500
-#tickers = get_constituents(index='SP500')
-#write_to_file('list_sp500.csv',tickers)
-#print tickers
+tickers = get_constituents(index='SP500')
+write_to_file('list_sp500.csv',tickers)
+print tickers
 #Dow Jones
 tickers = get_constituents(index='DJIA')
 write_to_file('list_djia.csv',tickers)
