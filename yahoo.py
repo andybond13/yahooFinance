@@ -1,16 +1,20 @@
-#!/usr/bin/python
+#!python
+
 #/*******************************************************************************
 #
-#  Script <yahooFinance> 
+#  Script <yahooFinance/yahoo.py> 
 #
 #  Author: Andrew J. Stershic
-#          Duke Computational Mechanics Lab (DCML)
-#          Duke University - Durham, NC (USA)
-#  E-mail: ajs84@duke.edu
-#  Web:    www.duke.edu/~ajs84
+#  E-mail: astershic@gmail.com
+#  Web:    www.linkedin.com/in/andrew-stershic-phd-pe 
 #
-#  Copyright (c) 2013 Andrew Stershic. All rights reserved. No warranty. No
+#  Copyright (c) 2020 Andrew Stershic. All rights reserved. No warranty. No
 #  liability.
+#
+#  Much thanks to: Ran Aroussi (aroussi.com), Rodrigo Bercini Martins (https://github.com/rodrigobercini)
+#      using https://github.com/ranaroussi/yfinance/
+#      due to https://github.com/ranaroussi/yfinance/issues/283,
+#          using fork https://github.com/rodrigobercini/yfinance
 #
 #  *Please cite ALL use of code in academic works, presentations, and
 #  publications, an example template of which is given by:
@@ -18,161 +22,85 @@
 #
 #*******************************************************************************/
 
+import ssl
+try:
+   _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    # Legacy Python that doesn't verify HTTPS certificates by default
+    pass
+else:
+    # Handle target environment that doesn't support HTTPS verification
+    ssl._create_default_https_context = _create_unverified_https_context
+
+import yfinance as yf
 import csv
-import urllib
-import os
 
-#define subfunctions
-def parse(page,phrase):
-	#find phrase
-	loc = page.find(phrase)
-	loc_end = page.find('<',loc+len(phrase))
-	raw = page[loc+len(phrase):loc_end]
+def get_stock_data(symbol):
+    ticker = yf.Ticker("MSFT")
 
-	if (loc == -1):
-		print 'Phrase not found!'
-		return '0'
+#    for item in ticker.info:
+#        print item, ticker.info[item]
 
-	#check for &nbsp
-	amp_loc = raw.find('&nbsp')
-	if (amp_loc != -1):
-		raw = raw[0:amp_loc]
+    data = {}
+    data['name'] = ticker.info['shortName'] 
+    data['price'] = ticker.info['regularMarketPrice']
+    data['beta'] = ticker.info['beta']
+    data['price_book_ratio'] = ticker.info['priceToBook'] 
 
-	#check for &amp;
-	amp_loc = raw.find('&amp;')
-	if (amp_loc != -1):
-		raw = raw.replace('&amp;','&')
+    marketCap = ticker.info['marketCap']
+    qtr = ticker.quarterly_cashflow
+    dates = qtr.columns.values
+    div = -(qtr[dates[0]]['Dividends Paid'] + qtr[dates[1]]['Dividends Paid'] + qtr[dates[2]]['Dividends Paid'] + qtr[dates[3]]['Dividends Paid']) 
+    divYield = div / marketCap
+    repurchase = -(qtr[dates[0]]['Repurchase Of Stock'] + qtr[dates[1]]['Repurchase Of Stock'] + qtr[dates[2]]['Repurchase Of Stock'] + qtr[dates[3]]['Repurchase Of Stock'])
+    repurchaseYield = repurchase / marketCap
+    shareholderYield = divYield + repurchaseYield 
 
-	#check for null
-	if (raw.find('-') != -1):
-		yahoo_loc = raw.find('Stock - Yahoo!')
-		if (yahoo_loc != -1):
-			final = raw[0:yahoo_loc]
-			common_loc = final.find(' Common')
-			if (common_loc != -1):
-				final = final[0:common_loc]
-			return final
-		else:
-			return '0'
+    data['market_cap'] = marketCap 
+    data['dividends_paid'] = div 
+    data['share_repurchase'] = repurchase
+    data['dividend_yield'] = divYield
+    data['repurchase_yield'] = repurchaseYield 
+    data['shareholder_yield'] = shareholderYield
 
-	#check for negative
-	final = raw
-	if (raw.startswith('(') and raw.endswith(')')):
-		final = '-' + raw[1:len(raw)-1]
-	return final
+    return data
 
-def make_number(phrase):
-	out = phrase
-	#check for zero
-	if (phrase == '0K'):
-		return '0'
-	#convert suffix to scientific notation
-	if (phrase.endswith('B')):
-		out = phrase[0:len(phrase)-1] + 'e9'
-		if (len(out) == 2):
-			out = 0
-	if (phrase.endswith('M')):
-		out = phrase[0:len(phrase)-1] + 'e6'
-		if (len(out) == 2):
-			out = 0
-	if (phrase.endswith('K')):
-		out = phrase[0:len(phrase)-1] + 'e3'
-		if (len(out) == 2):
-			out = 0
-	out = removeComma(out)
-	return out
-
-def parseSymbol(inString):
+def parse_symbol(inString):
 	out = inString.replace('.','-')
 	return out
 
-def removeComma(inString):
-	out = inString.replace(',','')
-	return out
+def get_symbols(file):
+
+    inReader = csv.reader(open(file, 'rb'), delimiter=' ', quotechar='"')
+    symbols = []
+
+    for row in inReader:
+#        time.sleep(0.)
+        if not row[0]:
+            break
+
+        symbol = row[0]
+        urlSymbol = parse_symbol(symbol)
+        symbols.append(urlSymbol)
+
+    return symbols
 
 def main(file,out):
-	#import list of symbols
-	inReader = csv.reader(open(file, 'rb'), delimiter=' ', quotechar='"')
-	outWriter = csv.writer(open(out, 'wb'), delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-	outWriter.writerow(['symbol', 'Company Name', 'Price', '# Shares','Dividends Paid','Stock Sale/(Purchase)', '', 'Net Payout per Share','Dividend Yield','Shareholder Yield','Beta','Price/Book Ratio'])
+    outWriter = csv.writer(open(out, 'wb'), delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    outWriter.writerow(['symbol', 'Company Name', 'Price', 'Market Cap', \
+        'Dividends Paid','Share Repurchase','Dividend Yield','Repurchase Yield', \
+        'Shareholder Yield','Beta','Price/Book Ratio'])
 
-	#---begin loop
-	for row in inReader:
+    #import list of symbols
+    symbols = get_symbols(file)
 
-		if not row[0]:
-			break
+    #import data for each symbol
+    for symbol in symbols:
+        print symbol
+        this_data = get_stock_data(symbol)
 
-		symbol = row[0]
-
-		urlSymbol = parseSymbol(symbol)
-
-		print symbol
-		#mix symbol name into string
-
-		cash_flow = urllib.urlopen("http://finance.yahoo.com/q/cf?s=" + urlSymbol + "&annual")
-		summary = urllib.urlopen("http://finance.yahoo.com/q/ks?s=" + urlSymbol + "+Key+Statistics")
-		cf = cash_flow.read()
-		cash_flow.close()
-		s = summary.read()
-		summary.close()
-
-		#grab data from page
-
-		#name
-		name = parse(s, '<title>'+urlSymbol+' Key Statistics | ')
-		print name
-
-		#price
-		price = parse(s, '<span id="yfs_l84_'+urlSymbol.lower()+'">')
-		price_out = make_number(price)
-		print price_out
-
-		#shares outstanding
-		num_shares = parse(s, 'Shares Outstanding<font size="-1"><sup>5</sup></font>:</td><td class="yfnc_tabledata1">')
-		num_shares_out = make_number(num_shares)
-		print num_shares_out
-
-		#dividends paid
-		div_value = parse(cf, 'Dividends Paid</td><td align="right">')
-		div_value_out = make_number(div_value+'K')
-		print div_value_out
-
-		#issuance/retirement of shares
-		iss_value = parse(cf, 'Sale Purchase of Stock</td><td align="right">')
-		iss_value_out = make_number(iss_value+'K')
-		print iss_value_out
-
-		#beta
-                beta = parse(s, 'Beta:</td><td class="yfnc_tabledata1">')
-                beta_out = make_number(beta)
-		print beta_out
-
-		#price-book ratio
-		pbr = parse(s, 'Price/Book (mrq):</td><td class="yfnc_tabledata1">')
-		pbr_out = make_number(pbr)
-		print pbr_out
-
-		#skip if not found
-		if num_shares_out is '0':
-			print "Skipped"
-			continue
-		if price_out is '0':
-			print "Skipped"
-			continue
-
-		#calculate
-		net_payout = -float(div_value_out)-float(iss_value_out)
-		net_payout_per_share = net_payout/float(num_shares_out)
-		dividend_yield = -float(div_value_out)/(float(price_out)*float(num_shares_out))
-		shareholder_yield = net_payout_per_share/float(price_out)
-		print str(net_payout)
-		print str(net_payout_per_share)
-		print str(dividend_yield)
-		print str(shareholder_yield)
-
-		#save to .csv
-		outWriter.writerow([symbol, name, price, num_shares_out, div_value_out, iss_value_out, '', net_payout_per_share, dividend_yield, shareholder_yield,beta_out,pbr_out])
-
-	#---end loop
+        outWriter.writerow([symbol, this_data['name'], this_data['price'], this_data['market_cap'], \
+            this_data['dividends_paid'], this_data['share_repurchase'], this_data['dividend_yield'], this_data['repurchase_yield'], \
+            this_data['shareholder_yield'], this_data['beta'], this_data['price_book_ratio']])
 
 main('list.csv','out.csv')
