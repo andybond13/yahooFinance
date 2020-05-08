@@ -33,10 +33,6 @@ def get_constituents(index='SP500'):
     soup = BeautifulSoup(content)
     tables = soup.find_all('table') # HTML table we actually need is tables[0] 
 
-    for i in range(0, len(tables)):
-        print ''
-        print '**{}**'.format(i)
-        print tables[i]
     external_class = tables[table_idx].findAll('a', {'class':'external text'})
 
     tickers = []
