@@ -36,27 +36,54 @@ import yfinance as yf
 import csv
 
 def get_stock_data(symbol):
-    ticker = yf.Ticker("MSFT")
+    ticker = yf.Ticker(symbol)
 
 #    for item in ticker.info:
 #        print item, ticker.info[item]
 
     data = {}
+
+    try:
+        ticker.info
+    except:
+        return None
+
     data['name'] = ticker.info['shortName'] 
     data['price'] = ticker.info['regularMarketPrice']
     data['beta'] = ticker.info['beta']
-    data['price_book_ratio'] = ticker.info['priceToBook'] 
+
+    if 'priceToBook' in ticker.info.keys():
+        data['price_book_ratio'] = ticker.info['priceToBook'] 
+    else:
+        data['price_book_ratio'] = float("NaN")
 
     marketCap = ticker.info['marketCap']
+    data['market_cap'] = marketCap 
+
     qtr = ticker.quarterly_cashflow
+    qtr = qtr.fillna(0)
+
     dates = qtr.columns.values
-    div = -(qtr[dates[0]]['Dividends Paid'] + qtr[dates[1]]['Dividends Paid'] + qtr[dates[2]]['Dividends Paid'] + qtr[dates[3]]['Dividends Paid']) 
+    if qtr.index.str.contains('Dividends').any():
+        div = -(qtr[dates[0]]['Dividends Paid'] + qtr[dates[1]]['Dividends Paid'] + qtr[dates[2]]['Dividends Paid'] + qtr[dates[3]]['Dividends Paid'])
+    else:
+        div = 0 
     divYield = div / marketCap
-    repurchase = -(qtr[dates[0]]['Repurchase Of Stock'] + qtr[dates[1]]['Repurchase Of Stock'] + qtr[dates[2]]['Repurchase Of Stock'] + qtr[dates[3]]['Repurchase Of Stock'])
+
+    if qtr.index.str.contains('Repurchase').any():
+        repurchase = -(qtr[dates[0]]['Repurchase Of Stock'] + qtr[dates[1]]['Repurchase Of Stock'] + qtr[dates[2]]['Repurchase Of Stock'] + qtr[dates[3]]['Repurchase Of Stock'])
+    else:
+        repurchase = 0
+
+    if qtr.index.str.contains('Issuance').any():
+        issuance = qtr[dates[0]]['Issuance Of Stock'] + qtr[dates[1]]['Issuance Of Stock'] + qtr[dates[2]]['Issuance Of Stock'] + qtr[dates[3]]['Issuance Of Stock']
+    else:
+        issuance = 0
+
+    repurchase = repurchase - issuance
     repurchaseYield = repurchase / marketCap
     shareholderYield = divYield + repurchaseYield 
 
-    data['market_cap'] = marketCap 
     data['dividends_paid'] = div 
     data['share_repurchase'] = repurchase
     data['dividend_yield'] = divYield
@@ -98,6 +125,10 @@ def main(file,out):
     for symbol in symbols:
         print symbol
         this_data = get_stock_data(symbol)
+
+        #check validity
+        if this_data == None:
+            continue
 
         outWriter.writerow([symbol, this_data['name'], this_data['price'], this_data['market_cap'], \
             this_data['dividends_paid'], this_data['share_repurchase'], this_data['dividend_yield'], this_data['repurchase_yield'], \
