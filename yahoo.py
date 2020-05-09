@@ -34,6 +34,7 @@ else:
 
 import yfinance as yf
 import csv
+import xlwt
 
 def get_stock_data(symbol):
     ticker = yf.Ticker(symbol)
@@ -113,16 +114,24 @@ def get_symbols(file):
     return symbols
 
 def main(file,out):
-    outWriter = csv.writer(open(out, 'wb'), delimiter=';',quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    outWriter.writerow(['symbol', 'Company Name', 'Price', 'Market Cap', \
+
+    book = xlwt.Workbook()
+    sheet1 = book.add_sheet("Sheet 1")
+
+    row = sheet1.row(0)
+    cols = ['Symbol', 'Company Name', 'Price', 'Market Cap', \
         'Dividends Paid','Share Repurchase','Dividend Yield','Repurchase Yield', \
-        'Shareholder Yield','Beta','Price/Book Ratio'])
+        'Shareholder Yield','Beta','Price/Book Ratio']
+    for index, col in enumerate(cols):
+        row.write(index, col)
 
     #import list of symbols
     symbols = get_symbols(file)
 
     #import data for each symbol
-    for symbol in symbols:
+    for i in range(0, len(symbols)):
+
+        symbol = symbols[i]
         print symbol
         this_data = get_stock_data(symbol)
 
@@ -130,8 +139,14 @@ def main(file,out):
         if this_data == None:
             continue
 
-        outWriter.writerow([symbol, this_data['name'], this_data['price'], this_data['market_cap'], \
+        row = sheet1.row(i+1)
+        row_data = [symbol, this_data['name'], this_data['price'], this_data['market_cap'], \
             this_data['dividends_paid'], this_data['share_repurchase'], this_data['dividend_yield'], this_data['repurchase_yield'], \
-            this_data['shareholder_yield'], this_data['beta'], this_data['price_book_ratio']])
+            this_data['shareholder_yield'], this_data['beta'], this_data['price_book_ratio']]
 
-main('list.csv','out.csv')
+        for index, datum in enumerate(row_data):
+            row.write(index, datum)
+
+    book.save(out)
+
+main('list.csv','out.xls')
